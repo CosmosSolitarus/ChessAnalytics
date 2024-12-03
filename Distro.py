@@ -27,7 +27,7 @@ sns.kdeplot(draws['EloDiff'], fill=True, alpha=0.6, color='#1f77b4', label='Draw
 plt.xlim(-100, 100)
 
 # Customize the chart
-plt.title('Distribution of Elo Difference (My Elo - Opponent\'s Elo) by Result', fontsize=16, fontweight='bold')
+plt.title('Distribution of Elo Difference by Result', fontsize=16, fontweight='bold')
 plt.xlabel('Elo Difference (MyElo - OppElo)', fontsize=14, fontweight='bold')
 plt.ylabel('Density', fontsize=14, fontweight='bold')
 plt.xticks(fontsize=12, fontweight='bold')
