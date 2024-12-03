@@ -37,7 +37,7 @@ def objective(trial):
     model = xgb.XGBClassifier(**param, random_state=999)
 
     # Perform 10-fold cross-validation
-    cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=999)
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=999)
     scores = cross_val_score(model, X_train, y_train, cv=cv, scoring='neg_log_loss')
 
     # Return the mean log loss (negative because cross_val_score minimizes)
@@ -45,7 +45,7 @@ def objective(trial):
 
 # Run Optuna to find the best hyperparameters
 study = optuna.create_study(direction='minimize')
-study.optimize(objective, n_trials=50)
+study.optimize(objective, n_trials=5)
 
 # Print the best hyperparameters
 print("Best hyperparameters:", study.best_params)

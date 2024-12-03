@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load the CSV file
-df = pd.read_csv("MyGames.csv")
+df = pd.read_csv("MyGamesCombined.csv")
 
 # Prepare the data for the new CSV
 # 1. Account - 0 if "Account" is "Cosmos_IV", else 1

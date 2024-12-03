@@ -4,6 +4,8 @@ import csv
 import re
 from datetime import datetime, timedelta
 
+tests = 5
+
 # Define the time zones
 utc = pytz.utc
 est = pytz.timezone("US/Eastern")
@@ -32,58 +34,47 @@ def simplify_termination(description):
         return "50 move rule"
     return "unknown"
 
-def MovesSplitter(moves, color, time_control):
-    try:
-        # Updated regex to match the exact format in the PGN
-        move_time_pattern = r'(\d+\.\s*[a-zA-Z0-9\-+]+|\d+\.\.\.\s*[a-zA-Z0-9\-+]+)\s*\{\s*\[%clk\s*([\d:\.]+)\]\s*\}'
-        
-        matches = re.findall(move_time_pattern, moves)
-        
-        if not matches:
-            raise ValueError("No move matches found in the PGN string")
+def moves_splitter(moves, color, time_control):
+    # Regex pattern to capture moves after the ". " (a period followed by a space) and stopping at the next space or brace
+    move_pattern = r'\.\s([a-zA-Z0-9\-+#]+)\s*[{]'
 
-        # Separate moves and times
-        parsed_moves = []
-        parsed_times = []
-        for match in matches:
-            # Clean up the move (remove move number)
-            cleaned_move = re.sub(r'^(\d+\.\s*|\d+\.\.\.\s*)', '', match[0]).strip()
-            parsed_moves.append(cleaned_move)
-            parsed_times.append(match[1])
+    # Regex pattern to capture the times (assuming they are always in [%clk ...] format)
+    time_pattern = r'\[%clk (\d+:\d+:\d+(\.\d+)?)\]'
 
-        # Count moves
-        if color == "white":
-            my_num_moves = len(parsed_moves[::2])
-            opp_num_moves = len(parsed_moves[1::2])
-        else:
-            my_num_moves = len(parsed_moves[1::2])
-            opp_num_moves = len(parsed_moves[::2])
+    # Extract moves using the defined pattern
+    parsed_moves = re.findall(move_pattern, moves)
 
-        # Convert time control to seconds
-        time_control_seconds = int(time_control)
+    # Extract times using the defined time pattern
+    parsed_times = re.findall(time_pattern, moves)
+    parsed_times = [t[0] for t in re.findall(time_pattern, moves)]
 
-        # Calculate total time used
-        my_times = parsed_times[::2] if color == "white" else parsed_times[1::2]
-        opp_times = parsed_times[1::2] if color == "white" else parsed_times[::2]
+    # Count moves
+    if color == "white":
+        my_num_moves = len(parsed_moves[::2])
+        opp_num_moves = len(parsed_moves[1::2])
+    else:
+        my_num_moves = len(parsed_moves[1::2])
+        opp_num_moves = len(parsed_moves[::2])
 
-        # Calculate time used
-        my_last_time = my_times[-1] if my_times else "0:00:00"
-        opp_last_time = opp_times[-1] if opp_times else "0:00:00"
+    # Convert time control to seconds
+    time_control_seconds = int(time_control)
 
-        my_total_time = time_control_seconds - time_to_seconds(my_last_time)
-        opp_total_time = time_control_seconds - time_to_seconds(opp_last_time)
+    # Calculate total time used
+    my_times = parsed_times[::2] if color == "white" else parsed_times[1::2]
+    opp_times = parsed_times[1::2] if color == "white" else parsed_times[::2]
 
-        # Calculate average time per move
-        my_avg_tpm = round(my_total_time / my_num_moves, 2) if my_num_moves > 0 else 0
-        opp_avg_tpm = round(opp_total_time / opp_num_moves, 2) if opp_num_moves > 0 else 0
+    # Calculate time used
+    my_last_time = my_times[-1] if my_times else "0:00:00"
+    opp_last_time = opp_times[-1] if opp_times else "0:00:00"
 
-        return parsed_moves, my_num_moves, opp_num_moves, round(my_total_time, 2), round(opp_total_time, 2), my_avg_tpm, opp_avg_tpm
+    my_total_time = time_control_seconds - time_to_seconds(my_last_time)
+    opp_total_time = time_control_seconds - time_to_seconds(opp_last_time)
 
-    except Exception as e:
-        print(f"Error in MovesSplitter: {e}")
-        import traceback
-        traceback.print_exc()
-        return [], 0, 0, 0, 0, 0, 0
+    # Calculate average time per move
+    my_avg_tpm = round(my_total_time / my_num_moves, 2) if my_num_moves > 0 else 0
+    opp_avg_tpm = round(opp_total_time / opp_num_moves, 2) if opp_num_moves > 0 else 0
+
+    return parsed_moves, parsed_times, my_num_moves, opp_num_moves, round(my_total_time, 2), round(opp_total_time, 2), my_avg_tpm, opp_avg_tpm
 
 def time_to_seconds(time_str):
     # Split the time string into hours, minutes, seconds, and fractional seconds
@@ -162,9 +153,9 @@ def get_game_of_day_and_week(current_time, daily_game_times, weekly_game_times):
     return game_of_day + 1, game_of_week + 1
 
 # Open the PGN file
-with open("MyGamesCosmos_IV.pgn") as pgn_file:
+with open("MyGamesCosmosSolitarus.pgn") as pgn_file:
     # Prepare to write to MyGames.csv
-    with open("MyGamesCosmos_IV.csv", mode="w", newline="") as csv_file:
+    with open("MyGamesCosmosSolitarus.csv", mode="w", newline="") as csv_file:
         gamefieldnames = [  "Account", "GameNumber", "Date", "StartTime", 
                             "DayOfWeek", "HourOfDay", "GameOfDay", "GameOfWeek", 
                             "TimeControl", "MyElo", "OppElo", 
@@ -179,7 +170,7 @@ with open("MyGamesCosmos_IV.pgn") as pgn_file:
         games_writer.writeheader()
 
         # Prepare to write to Moves.csv
-        with open("MovesCosmos_IV.csv", mode="w", newline="") as moves_file:
+        with open("MovesCosmosSolitarus.csv", mode="w", newline="") as moves_file:
             movefieldnames = ["Account", "GameNumber",  
                               "MoveNumber", "Move", "Time"]
             moves_writer = csv.DictWriter(moves_file, fieldnames=movefieldnames)
@@ -216,9 +207,9 @@ with open("MyGamesCosmos_IV.pgn") as pgn_file:
                     white_player = headers.get("White")
                     black_player = headers.get("Black")
                     result = headers.get("Result")
-                    my_elo = headers.get("WhiteElo") if white_player == "Cosmos_IV" else headers.get("BlackElo")
-                    opp_elo = headers.get("BlackElo") if white_player == "Cosmos_IV" else headers.get("WhiteElo")
-                    color = "white" if white_player == "Cosmos_IV" else "black"
+                    my_elo = headers.get("WhiteElo") if white_player == "CosmosSolitarus" else headers.get("BlackElo")
+                    opp_elo = headers.get("BlackElo") if white_player == "CosmosSolitarus" else headers.get("WhiteElo")
+                    color = "white" if white_player == "CosmosSolitarus" else "black"
                     result_text = "draw"
                     if result == "1-0" and color == "white":
                         result_text = "won"
@@ -234,8 +225,20 @@ with open("MyGamesCosmos_IV.pgn") as pgn_file:
                     termination_simplified = simplify_termination(termination_description)
 
                     # Extract moves and times
-                    moves, my_num_moves, opp_num_moves, my_total_time, opp_total_time, my_avg_tpm, opp_avg_tpm = MovesSplitter(str(game[0]), color, headers.get("TimeControl"))
-                    
+                    try:
+                        moves, times, my_num_moves, opp_num_moves, my_total_time, opp_total_time, my_avg_tpm, opp_avg_tpm = moves_splitter(str(game[0]), color, headers.get("TimeControl"))
+                    except Exception as e:
+                        # Print the error message, game number, and details of the game
+                        print(f"Error processing game {game_number}: {e}")
+                        print("White Player:", headers.get("White"))
+                        print("Black Player:", headers.get("Black"))
+                        print("Game Termination:", headers.get("Termination"))
+                        print("Game Result:", headers.get("Result"))
+                        print("TimeControl:", headers.get("TimeControl"))
+                        
+                        # Skip the game and continue processing
+                        continue  # Skip this game and move to the next
+
                     # Analyze castling
                     i_castled_first, i_castled_short, i_castled_long, opp_castled_short, opp_castled_long, my_castling_move, opp_castling_move = analyze_castling(moves, color)
 
@@ -259,7 +262,7 @@ with open("MyGamesCosmos_IV.pgn") as pgn_file:
 
                     # Write game details to MyGames.csv
                     games_writer.writerow({
-                        "Account": "Cosmos_IV",
+                        "Account": "CosmosSolitarus",
                         "GameNumber": game_number,
                         "Date": start_datetime.strftime("%Y-%m-%d"),
                         "StartTime": start_datetime.strftime("%H:%M:%S"),
@@ -296,12 +299,12 @@ with open("MyGamesCosmos_IV.pgn") as pgn_file:
                     move_number = 1
                     increment_flag = False
 
-                    for i in range(0, len(moves) - 1, 2):  # Loop in steps of 2
+                    for i in range(0, len(moves)):
                         move = moves[i]
-                        time = moves[i + 1] if (i + 1) < len(moves) else ""
+                        time = times[i]
 
                         moves_writer.writerow({
-                            "Account": "Cosmos_IV", 
+                            "Account": "CosmosSolitarus", 
                             "GameNumber": game_number, 
                             "MoveNumber": move_number, 
                             "Move": move, 
