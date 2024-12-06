@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import optuna
 
 # Load the prepared dataset
-df = pd.read_csv("MyGamesPrepared.csv")
+df = pd.read_csv("csv/MyGamesPrepared.csv")
 
 # Separate features and target
 X = df.drop(columns=['Result'])

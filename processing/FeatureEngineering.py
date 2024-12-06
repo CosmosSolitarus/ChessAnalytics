@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load the CSV file
-df = pd.read_csv("MyGamesCombined.csv")
+df = pd.read_csv("csv/MyGamesCombined.csv")
 
 # Prepare the data for the new CSV
 # 1. Account - 0 if "Account" is "Cosmos_IV", else 1
@@ -63,6 +63,6 @@ df = df[columns_to_keep]
 df = df.dropna()
 
 # Save the prepared CSV
-df.to_csv("MyGamesPrepared.csv", index=False)
+df.to_csv("csv/MyGamesPrepared.csv", index=False)
 
 print("CSV preparation complete! The file has been saved as 'MyGamesPrepared.csv'.")

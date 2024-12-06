@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Read the CSV file
-df = pd.read_csv('MyGamesCombined.csv')
+df = pd.read_csv('csv/MyGamesCombined.csv')
 
 # Filter data for "Cosmos_IV" with TimeControl = 600
 filtered_data = df[(df['Account'] == 'Cosmos_IV') & (df['TimeControl'] == 600)]

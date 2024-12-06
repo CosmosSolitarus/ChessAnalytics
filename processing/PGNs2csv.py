@@ -153,9 +153,9 @@ def get_game_of_day_and_week(current_time, daily_game_times, weekly_game_times):
     return game_of_day + 1, game_of_week + 1
 
 # Open the PGN file
-with open("MyGamesCosmosSolitarus.pgn") as pgn_file:
+with open("pgn/MyGamesCosmosSolitarus.pgn") as pgn_file:
     # Prepare to write to MyGames.csv
-    with open("MyGamesCosmosSolitarus.csv", mode="w", newline="") as csv_file:
+    with open("csv/MyGamesCosmosSolitarus.csv", mode="w", newline="") as csv_file:
         gamefieldnames = [  "Account", "GameNumber", "Date", "StartTime", 
                             "DayOfWeek", "HourOfDay", "GameOfDay", "GameOfWeek", 
                             "TimeControl", "MyElo", "OppElo", 
@@ -170,7 +170,7 @@ with open("MyGamesCosmosSolitarus.pgn") as pgn_file:
         games_writer.writeheader()
 
         # Prepare to write to Moves.csv
-        with open("MovesCosmosSolitarus.csv", mode="w", newline="") as moves_file:
+        with open("csv/MovesCosmosSolitarus.csv", mode="w", newline="") as moves_file:
             movefieldnames = ["Account", "GameNumber",  
                               "MoveNumber", "Move", "Time"]
             moves_writer = csv.DictWriter(moves_file, fieldnames=movefieldnames)
