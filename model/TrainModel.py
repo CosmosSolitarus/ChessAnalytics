@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import optuna
 
 n_splits = 10
-n_jobs = 7
+n_jobs = 8
 n_trials = 40
 
 # Load the prepared dataset
