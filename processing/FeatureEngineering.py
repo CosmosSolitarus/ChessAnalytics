@@ -57,7 +57,10 @@ columns_to_keep = [
     'MyAvgTPM', 'OppAvgTPM',
     'TimeSinceLast'
 ]
+
 df = df[columns_to_keep]
+
+df = df[df['TimeControl'] == 600]
 
 # Drop rows with any NA values
 df = df.dropna()

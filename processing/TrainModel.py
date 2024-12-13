@@ -2,18 +2,38 @@ import pandas as pd
 import xgboost as xgb
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
 from sklearn.metrics import log_loss, accuracy_score
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 import optuna
 
+n_splits = 10
+n_jobs = 7
+n_trials = 40
+
 # Load the prepared dataset
 df = pd.read_csv("csv/MyGamesPrepared.csv")
+
+# Drop specific columns
+columns_to_drop = ['Account', 'Color', 'TimeControl', 
+                   'ICastledFirst', 'ICastledShort', 'ICastledLong', 'OppCastledShort', 'OppCastledLong',
+                   'MyNumMoves', 'OppNumMoves', 'MyTotalTime', 'OppTotalTime', 'MyAvgTPM', 'OppAvgTPM']
+
+df = df.drop(columns=columns_to_drop)
 
 # Separate features and target
 X = df.drop(columns=['Result'])
 y = df['Result']
 
 # Split into train-test sets for validation during hyperparameter tuning
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=999, stratify=y)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=999, stratify=y)
+
+# Define class weights inversely proportional to their frequencies
+class_weights = {
+    0: 2850 / 1431, # Win
+    1: 2850 / 124,  # Draw
+    2: 2850 / 1295  # Loss
+}
 
 # Define an objective function for Optuna
 def objective(trial):
@@ -21,7 +41,8 @@ def objective(trial):
     param = {
         'objective': 'multi:softprob',  # Multiclass classification with probabilities
         'num_class': 3,  # Classes: win, draw, loss
-        'n_jobs': 6,
+        'n_jobs': n_jobs,
+        'tree_method': trial.suggest_categorical('tree_method', ['hist']),
         'booster': trial.suggest_categorical('booster', ['gbtree', 'dart']),
         'max_depth': trial.suggest_int('max_depth', 3, 10),
         'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3, log=True),
@@ -30,14 +51,14 @@ def objective(trial):
         'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 1.0),
         'reg_alpha': trial.suggest_float('reg_alpha', 1e-8, 1.0, log=True),
         'reg_lambda': trial.suggest_float('reg_lambda', 1e-8, 1.0, log=True),
-        'gamma': trial.suggest_float('gamma', 1e-8, 1.0, log=True),
+        'gamma': trial.suggest_float('gamma', 1e-8, 1.0, log=True)
     }
 
     # Initialize the XGBoost model
     model = xgb.XGBClassifier(**param, random_state=999)
 
     # Perform 10-fold cross-validation
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=999)
+    cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=999)
     scores = cross_val_score(model, X_train, y_train, cv=cv, scoring='neg_log_loss')
 
     # Return the mean log loss (negative because cross_val_score minimizes)
@@ -45,17 +66,20 @@ def objective(trial):
 
 # Run Optuna to find the best hyperparameters
 study = optuna.create_study(direction='minimize')
-study.optimize(objective, n_trials=5)
+study.optimize(objective, n_trials=n_trials)
 
 # Print the best hyperparameters
 print("Best hyperparameters:", study.best_params)
+
+# Add weights to the training data
+sample_weights = y_train.map(class_weights)
 
 # Train the model with the best hyperparameters on the full training set
 best_params = study.best_params
 best_params['objective'] = 'multi:softprob'
 best_params['num_class'] = 3
 best_model = xgb.XGBClassifier(**best_params, random_state=999)
-best_model.fit(X_train, y_train)
+best_model.fit(X_train, y_train, sample_weight=sample_weights)
 
 # Evaluate on the test set
 y_pred_proba = best_model.predict_proba(X_test)
@@ -67,6 +91,10 @@ accuracy = accuracy_score(y_test, y_pred)
 
 print(f"Log Loss on test set: {logloss}")
 print(f"Accuracy on test set: {accuracy}")
+
+# Save the model to JSON format
+best_model.get_booster().save_model("json/model.json")
+print("Model saved as model.json")
 
 # Display probabilities for the first few test samples
 result_probabilities = pd.DataFrame(y_pred_proba, columns=['Win', 'Draw', 'Loss'])
@@ -97,3 +125,16 @@ feature_names = X_train.columns
 # Plot importance for 'weight', 'gain', and 'cover'
 for importance_type in ['weight', 'gain', 'cover']:
     plot_feature_importance(best_model, feature_names, importance_type=importance_type)
+
+# Compute the confusion matrix
+cm = confusion_matrix(y_test, y_pred, labels=best_model.classes_)
+
+# Display the confusion matrix as a heatmap
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=best_model.classes_)
+disp.plot(cmap='viridis')
+plt.title("Confusion Matrix")
+plt.show()
+
+# Generate a classification report
+report = classification_report(y_test, y_pred, target_names=['Win', 'Draw', 'Loss'])
+print(report)
