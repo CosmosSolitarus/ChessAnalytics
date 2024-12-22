@@ -1,6 +1,5 @@
 import xgboost as xgb
 import pandas as pd
-import numpy as np
 import json
 
 def analyze_xgboost_model(model_path, feature_names):
