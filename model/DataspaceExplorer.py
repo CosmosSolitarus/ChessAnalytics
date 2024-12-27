@@ -1,8 +1,37 @@
-from concurrent.futures import ThreadPoolExecutor
-from multiprocessing import cpu_count
+import time
+import cProfile
+import pstats
+from io import StringIO
 import xgboost as xgb
-import numpy as np
-import os, csv
+from multiprocessing import cpu_count
+from concurrent.futures import ThreadPoolExecutor
+import csv
+import os
+
+class TimingStats:
+    def __init__(self):
+        self.combination_time = 0
+        self.prediction_time = 0
+        self.io_time = 0
+        self.combinations_processed = 0
+        self.start_time = time.time()
+
+    def print_stats(self):
+        total_time = time.time() - self.start_time
+        print("\nTiming Statistics:")
+        print(f"Total Runtime: {total_time:.2f} seconds")
+        print(f"Combinations Processed: {self.combinations_processed:,}")
+        print(f"Processing Rate: {self.combinations_processed/total_time:.2f} combinations/second")
+        if self.combinations_processed > 0:
+            print(f"\nPer Combination Averages:")
+            print(f"Combination Generation: {(self.combination_time/self.combinations_processed)*1000:.3f} ms")
+            print(f"XGBoost Prediction: {(self.prediction_time/self.combinations_processed)*1000:.3f} ms")
+            print(f"I/O Operations: {(self.io_time/self.combinations_processed)*1000:.3f} ms")
+        
+        print(f"\nPercentage Breakdown:")
+        print(f"Combination Generation: {(self.combination_time/total_time)*100:.1f}%")
+        print(f"XGBoost Prediction: {(self.prediction_time/total_time)*100:.1f}%")
+        print(f"I/O Operations: {(self.io_time/total_time)*100:.1f}%")
 
 # Defines the bounds and precision of a parameter
 # The parameter can be incremented by the step size from
@@ -118,23 +147,34 @@ def validate_columns(model, dataspace):
 
 # Worker function to evaluate combinations
 def worker_search(model, dataspace, start_index, num_combinations, worker_id):
+    stats = TimingStats()
     feature_names = model.feature_names
     worker_file = f"worker_{worker_id}.csv"
     
-    # Determine if model is classification or regression by making a test prediction
+    # Set up for batched I/O
+    PREDICTION_BATCH_SIZE = 100000      # Up from 10000
+    IO_BATCH_SIZE = 100000              # Up from 100000
+    io_buffer = []
+    
+    # Test prediction setup and determine if classification
+    t0 = time.time()
     test_input = dataspace.index_to_combination(start_index)
+    stats.combination_time += time.time() - t0
+    
+    t0 = time.time()
     test_matrix = xgb.DMatrix([test_input], feature_names=feature_names)
     test_pred = model.predict(test_matrix, output_margin=False)
+    stats.prediction_time += time.time() - t0
+    
     is_classification = len(test_pred.shape) > 1
     
-    # Prepare CSV headers
+    # Prepare headers
     if is_classification:
         num_classes = test_pred.shape[1]
         headers = [f'prediction_class_{i}' for i in range(num_classes)]
     else:
         headers = ['prediction']
     
-    # Add feature names to headers
     feature_idx = 0
     for datarange in dataspace.dataranges:
         if isinstance(datarange, LinearDatarange):
@@ -147,15 +187,34 @@ def worker_search(model, dataspace, start_index, num_combinations, worker_id):
             headers.extend(datarange.names)
             feature_idx += len(datarange.names)
 
-    # Write results directly to CSV
+    # Initialize CSV file with headers
     with open(worker_file, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=headers)
-        writer.writeheader()
+        writer = csv.writer(f)
+        writer.writerow(headers)
+    
+    def write_buffer_to_csv():
+        if io_buffer:
+            t0 = time.time()
+            with open(worker_file, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerows(io_buffer)
+            stats.io_time += time.time() - t0
+            io_buffer.clear()
+    
+    # Process combinations in batches
+    for batch_start in range(start_index, start_index + num_combinations, PREDICTION_BATCH_SIZE):
+        batch_end = min(batch_start + PREDICTION_BATCH_SIZE, start_index + num_combinations)
+        batch_size = batch_end - batch_start
+        batch_combinations = []
+        batch_inputs = []
         
-        for idx in range(start_index, start_index + num_combinations):
+        # Generate combinations
+        for idx in range(batch_start, batch_end):
+            t0 = time.time()
             combination = dataspace.index_to_combination(idx)
+            stats.combination_time += time.time() - t0
+            batch_combinations.append(combination)
             
-            # Convert combination into a dictionary format
             inputs = {}
             feature_idx = 0
             for datarange in dataspace.dataranges:
@@ -169,39 +228,63 @@ def worker_search(model, dataspace, start_index, num_combinations, worker_id):
                     for name in datarange.names:
                         inputs[name] = combination[feature_idx]
                         feature_idx += 1
-
-            # Sort inputs by feature names to match model's expected order
+            
             sorted_inputs = [inputs[name] for name in feature_names]
-            input_matrix = xgb.DMatrix([sorted_inputs], feature_names=feature_names)
-            prediction = model.predict(input_matrix, output_margin=False)
-
-            # Prepare row for CSV
-            row = {}
+            batch_inputs.append(sorted_inputs)
+        
+        # Make predictions
+        t0 = time.time()
+        input_matrix = xgb.DMatrix(batch_inputs, feature_names=feature_names)
+        predictions = model.predict(input_matrix, output_margin=False)
+        stats.prediction_time += time.time() - t0
+        
+        # Prepare rows for buffer
+        for idx, (combination, prediction) in enumerate(zip(batch_combinations, predictions)):
+            row = []
             if is_classification:
-                for i, pred in enumerate(prediction[0]):
-                    row[f'prediction_class_{i}'] = pred
+                row.extend(prediction)
             else:
-                row['prediction'] = prediction[0]
-                
-            # Add features to row
-            for name, value in inputs.items():
-                row[name] = value
-                
-            writer.writerow(row)
+                row.append(prediction)
+            
+            feature_idx = 0
+            for datarange in dataspace.dataranges:
+                if isinstance(datarange, LinearDatarange):
+                    row.append(combination[feature_idx])
+                    feature_idx += 1
+                elif isinstance(datarange, NonlinearDatarange):
+                    row.append(combination[feature_idx])
+                    feature_idx += 1
+                elif isinstance(datarange, OneHotDatarange):
+                    for _ in datarange.names:
+                        row.append(combination[feature_idx])
+                        feature_idx += 1
+            
+            io_buffer.append(row)
+            
+            # Write buffer if it reaches the size limit
+            if len(io_buffer) >= IO_BATCH_SIZE:
+                write_buffer_to_csv()
+        
+        stats.combinations_processed += batch_size
     
+    # Write any remaining rows
+    write_buffer_to_csv()
+    stats.print_stats()
     return worker_file
 
 # Provided an XGBoost model and information about its columns, search
 # all possible combinations of inputs and save the outputs to CSVs
-def dataspace_search(model, dataspace, num_threads=max(1, cpu_count() - 1)):
-    # Step 1: Warn user about the total combinations 
-    print(f"Warning: The total number of combinations to search is {dataspace.size}.")
-    print(f"Using {num_threads} threads for parallel processing. ({dataspace.size / num_threads} combinations per thread.)")
-
-    # Step 2: Validate model and dataspace compatibility
+def dataspace_search(model, dataspace, num_threads=max(1, cpu_count() - 1)):    
+    # Enable profiling
+    pr = cProfile.Profile()
+    pr.enable()
+    
+    print(f"Starting search with {dataspace.size:,} combinations")
+    print(f"Using {num_threads} threads ({dataspace.size/num_threads:,.0f} combinations per thread)")
+    print(f"Estimated time: {dataspace.size * 0.019 / (60 * 1000):,.0f} minutes.")
+    
     validate_columns(model, dataspace)
-
-    # Step 3: Parallelized Search with CSV output
+    
     worker_indices = dataspace.get_worker_indices(num_threads)
     worker_files = []
     output_file = "Dataspace.csv"
@@ -210,39 +293,49 @@ def dataspace_search(model, dataspace, num_threads=max(1, cpu_count() - 1)):
         worker_id, (start_index, num_combinations) = args
         return worker_search(model, dataspace, start_index, num_combinations, worker_id)
 
+    t0 = time.time()
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         worker_args = enumerate([
             (start_index, num_combinations)
             for start_index, num_combinations in worker_indices
         ])
         worker_files = list(executor.map(process_worker_range, worker_args))
+    parallel_time = time.time() - t0
 
-    # Step 4: Combine Results
-    print(f"Combining results from {len(worker_files)} workers into {output_file}...")
+    print(f"\nParallel processing time: {parallel_time:.2f} seconds")
     
-    # Copy header from first worker file
+    # Combine results efficiently using file concatenation
+    t0 = time.time()
     with open(worker_files[0], 'r', newline='') as first_file:
         header = next(csv.reader(first_file))
     
-    # Write combined results
     with open(output_file, 'w', newline='') as outfile:
         writer = csv.writer(outfile)
         writer.writerow(header)
         
-        # Process each worker file
+        # Use larger buffer size for combining files
+        buffer_size = 1024 * 1024  # 1MB buffer
         for worker_file in worker_files:
             with open(worker_file, 'r', newline='') as infile:
-                reader = csv.reader(infile)
-                next(reader)  # Skip header
-                for row in reader:
-                    writer.writerow(row)
-            
-            # Clean up worker file
+                # Skip header
+                next(infile)
+                while True:
+                    chunk = infile.read(buffer_size)
+                    if not chunk:
+                        break
+                    outfile.write(chunk)
             os.remove(worker_file)
-            
-    print(f"Search complete. Results saved to {output_file}")
+    
+    combine_time = time.time() - t0
+    print(f"File combination time: {combine_time:.2f} seconds")
+    
+    # Disable profiling and print results
+    pr.disable()
+    s = StringIO()
+    ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
+    ps.print_stats()
+    print(s.getvalue())
 
-# Testing the Implementation
 def test1():
     # Load an XGBoost model from a saved JSON file
     model = xgb.Booster()
@@ -263,11 +356,11 @@ def test1():
     ds.append(LinearDatarange('2ndLastResultIsLoss', 0, 1, 2))  # Binary: 0 or 1
 
     # Add continuous columns with defined ranges and steps
-    ds.append(LinearDatarange('TimeOfDay', 0, 43200, 2))
-    ds.append(LinearDatarange('GameOfDay', 1, 10, 2))
-    ds.append(LinearDatarange('GameOfWeek', 1, 50, 2))
-    ds.append(LinearDatarange('EloDifference', -10, 10, 3))
-    ds.append(LinearDatarange('TimeSinceLast', 0, 158400, 2))
+    ds.append(LinearDatarange('TimeOfDay', 0, 82800, 24))
+    ds.append(LinearDatarange('GameOfDay', 1, 10, 10))
+    ds.append(LinearDatarange('GameOfWeek', 10, 100, 10))
+    ds.append(LinearDatarange('EloDifference', -100, 100, 9))
+    ds.append(NonlinearDatarange('TimeSinceLast', [5*60, 15*60, 3600, 2*3600, 4*3600, 18*3600, 36*3600, 72*3600]))
 
     # Run MinMaxSearch
     dataspace_search(model, ds, num_threads=7)
@@ -315,10 +408,51 @@ def test3():
 
     print(ds.get_worker_indices(10))
 
+def test4():
+    start = time.time() * 1000.0
+    num_threads = 7
+    
+    # Load an XGBoost model from a saved JSON file
+    model = xgb.Booster()
+    model.load_model("json/model.json")
+
+    # Create dataspace
+    ds = Dataspace()
+
+    # Add one-hot encoded columns for days of the week (Sunday through Friday)
+    ds.append(OneHotDatarange(['IsSunday', 'IsMonday', 'IsTuesday', 'IsWednesday', 'IsThursday', 'IsFriday', 'IsSaturday']))
+
+    # Add binary columns for result-related features
+    ds.append(LinearDatarange('LastResultIsWin', 0, 1, 2))  # Binary: 0 or 1
+    ds.append(LinearDatarange('LastResultIsDraw', 0, 1, 2))  # Binary: 0 or 1
+    ds.append(LinearDatarange('LastResultIsLoss', 0, 1, 2))  # Binary: 0 or 1
+    ds.append(LinearDatarange('2ndLastResultIsWin', 0, 1, 2))  # Binary: 0 or 1
+    ds.append(LinearDatarange('2ndLastResultIsDraw', 0, 1, 2))  # Binary: 0 or 1
+    ds.append(LinearDatarange('2ndLastResultIsLoss', 0, 1, 2))  # Binary: 0 or 1
+
+    # Add continuous columns with defined ranges and steps
+    ds.append(LinearDatarange('TimeOfDay', 0, 82800, 24))
+    ds.append(LinearDatarange('GameOfDay', 1, 10, 10))
+    ds.append(LinearDatarange('GameOfWeek', 10, 100, 10))
+    ds.append(LinearDatarange('EloDifference', -100, 100, 9))
+    ds.append(NonlinearDatarange('TimeSinceLast', [5*60, 15*60, 3600, 2*3600, 4*3600, 18*3600, 36*3600, 72*3600]))
+
+    # Run MinMaxSearch
+    dataspace_search(model, ds, num_threads=num_threads)
+
+    end = time.time() * 1000.0
+    real_time = (end-start) / 1000
+
+    print(f"Total real time: {real_time} seconds.")
+    print(f"Total core time: {num_threads * real_time} seconds.")
+    print(f"Average real time per 1000 combinations: {1000 * real_time / ds.size} seconds.")
+    print(f"Average core time per 1000 combinations: {num_threads * 1000 * real_time / ds.size} seconds.")
+
 def main():
-    test1()
+    #test1()
     #test2()
     #test3()
+    test4()
 
 if __name__ == "__main__":
     main()

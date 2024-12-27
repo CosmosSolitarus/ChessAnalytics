@@ -40,6 +40,63 @@ df['2ndLastResultIsWin'] = (df['2ndLastResult'] == 'won').astype(int)
 df['2ndLastResultIsDraw'] = (df['2ndLastResult'] == 'draw').astype(int)
 df['2ndLastResultIsLoss'] = (df['2ndLastResult'] == 'lost').astype(int)
 
+# Function to calculate percentages for each row
+def calculate_percentages(df, current_index):
+    """
+    Calculate win/draw/loss percentages for daily and weekly games up to current_index
+    """
+    current_row = df.iloc[current_index]
+    god = current_row['GameOfDay']
+    gow = current_row['GameOfWeek']
+    
+    # Initialize percentages
+    daily_stats = {'win': 0, 'loss': 0, 'draw': 0}
+    weekly_stats = {'win': 0, 'loss': 0, 'draw': 0}
+    
+    # If this is not the first game, calculate percentages
+    if current_index > 0:
+        # Get previous games in the day
+        daily_window = min(int(god) - 1, current_index)
+        if daily_window > 0:
+            daily_games = df.iloc[current_index - daily_window:current_index]
+            daily_results = daily_games['Result'].value_counts(normalize=True)
+            daily_stats['win'] = daily_results.get(0, 0) * 100
+            daily_stats['loss'] = daily_results.get(2, 0) * 100  # Note: Changed from 1 to 2 to match your mapping
+            daily_stats['draw'] = daily_results.get(1, 0) * 100  # Note: Changed from 2 to 1 to match your mapping
+        
+        # Get previous games in the week
+        weekly_window = min(int(gow) - 1, current_index)
+        if weekly_window > 0:
+            weekly_games = df.iloc[current_index - weekly_window:current_index]
+            weekly_results = weekly_games['Result'].value_counts(normalize=True)
+            weekly_stats['win'] = weekly_results.get(0, 0) * 100
+            weekly_stats['loss'] = weekly_results.get(2, 0) * 100  # Note: Changed from 1 to 2
+            weekly_stats['draw'] = weekly_results.get(1, 0) * 100  # Note: Changed from 2 to 1
+    
+    return pd.Series({
+        'DailyWinPerc': daily_stats['win'],
+        'DailyLossPerc': daily_stats['loss'],
+        'DailyDrawPerc': daily_stats['draw'],
+        'WeeklyWinPerc': weekly_stats['win'],
+        'WeeklyLossPerc': weekly_stats['loss'],
+        'WeeklyDrawPerc': weekly_stats['draw']
+    })
+
+# Calculate percentages for each row
+percentage_columns = pd.DataFrame([
+    calculate_percentages(df, i) for i in range(len(df))
+])
+
+# Add new columns to the dataframe
+df = pd.concat([df, percentage_columns], axis=1)
+
+# Round all percentage columns to 2 decimal places
+percentage_cols = [
+    'DailyWinPerc', 'DailyLossPerc', 'DailyDrawPerc',
+    'WeeklyWinPerc', 'WeeklyLossPerc', 'WeeklyDrawPerc'
+]
+df[percentage_cols] = df[percentage_cols].round(2)
+
 # Select only the desired columns
 columns_to_keep = [
     'Account',
@@ -55,15 +112,18 @@ columns_to_keep = [
     'MyNumMoves', 'OppNumMoves',
     'MyTotalTime', 'OppTotalTime',
     'MyAvgTPM', 'OppAvgTPM',
-    'TimeSinceLast'
+    'TimeSinceLast',
+    'DailyWinPerc', 'DailyLossPerc', 'DailyDrawPerc',
+    'WeeklyWinPerc', 'WeeklyLossPerc', 'WeeklyDrawPerc'
 ]
 
 df = df[columns_to_keep]
 
-df = df[df['TimeControl'] == 600]
+#df = df[df['TimeControl'] == 600]
 
 # Drop rows with any NA values
 df = df.dropna()
+df = df.iloc[1:]
 
 # Save the prepared CSV
 df.to_csv("csv/MyGamesPrepared.csv", index=False)
