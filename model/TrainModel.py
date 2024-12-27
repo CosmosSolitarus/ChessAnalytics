@@ -7,9 +7,10 @@ from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 import optuna
 
+test_split = 0.1
 n_splits = 10
 n_jobs = 8
-n_trials = 40
+n_trials = 75
 
 # Load the prepared dataset
 df = pd.read_csv("csv/MyGamesPrepared.csv")
@@ -26,13 +27,26 @@ X = df.drop(columns=['Result'])
 y = df['Result']
 
 # Split into train-test sets for validation during hyperparameter tuning
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=999, stratify=y)
+# Calculate the split point for the last 10%
+split_idx = int(len(X) * (1 - test_split))
+
+# Split the data chronologically - last 10% for testing
+X_train = X.iloc[:split_idx]
+X_test = X.iloc[split_idx:]
+y_train = y.iloc[:split_idx]
+y_test = y.iloc[split_idx:]
 
 # Define class weights inversely proportional to their frequencies
+# class_weights = {
+#     0: 2916 / 1459, # Win
+#     1: 2916 / 127,  # Draw
+#     2: 2916 / 1330  # Loss
+# }
+
 class_weights = {
-    0: 2850 / 1431, # Win
-    1: 2850 / 124,  # Draw
-    2: 2850 / 1295  # Loss
+    0: 100, # Win
+    1: 1,  # Draw
+    2: 100  # Loss
 }
 
 # Define an objective function for Optuna
@@ -110,14 +124,15 @@ def plot_feature_importance(model, feature_names, importance_type):
     importance_df = importance_df.sort_values(by='Importance', ascending=False)
     
     # Plot
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(12, 8))  # Larger figure size for better readability
     importance_df['Importance'].plot(kind='bar')
     plt.title(f"Feature Importance ({importance_type})")
     plt.ylabel("Importance")
     plt.xlabel("Feature")
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
-    plt.show()
+    plt.savefig(f'png/feature_importance_{importance_type}.png', dpi=300, bbox_inches='tight')
+    plt.close()
 
 # Feature names (columns in the input data)
 feature_names = X_train.columns
@@ -130,10 +145,14 @@ for importance_type in ['weight', 'gain', 'cover']:
 cm = confusion_matrix(y_test, y_pred, labels=best_model.classes_)
 
 # Display the confusion matrix as a heatmap
+# Display the confusion matrix as a heatmap
+plt.figure(figsize=(10, 8))
 disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=best_model.classes_)
 disp.plot(cmap='viridis')
 plt.title("Confusion Matrix")
-plt.show()
+plt.tight_layout()
+plt.savefig('png/confusion_matrix.png', dpi=300, bbox_inches='tight')
+plt.close()
 
 # Generate a classification report
 report = classification_report(y_test, y_pred, target_names=['Win', 'Draw', 'Loss'])

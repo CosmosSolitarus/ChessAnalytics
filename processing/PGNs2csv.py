@@ -153,9 +153,9 @@ def get_game_of_day_and_week(current_time, daily_game_times, weekly_game_times):
     return game_of_day + 1, game_of_week + 1
 
 # Open the PGN file
-with open("pgn/MyGamesCosmosSolitarus.pgn") as pgn_file:
+with open("pgn/MyGamesCosmos_IV.pgn") as pgn_file:
     # Prepare to write to MyGames.csv
-    with open("csv/MyGamesCosmosSolitarus.csv", mode="w", newline="") as csv_file:
+    with open("csv/MyGamesCosmos_IV.csv", mode="w", newline="") as csv_file:
         gamefieldnames = [  "Account", "GameNumber", "Date", "StartTime", 
                             "DayOfWeek", "HourOfDay", "GameOfDay", "GameOfWeek", 
                             "TimeControl", "MyElo", "OppElo", 
@@ -170,7 +170,7 @@ with open("pgn/MyGamesCosmosSolitarus.pgn") as pgn_file:
         games_writer.writeheader()
 
         # Prepare to write to Moves.csv
-        with open("csv/MovesCosmosSolitarus.csv", mode="w", newline="") as moves_file:
+        with open("csv/MovesCosmos_IV.csv", mode="w", newline="") as moves_file:
             movefieldnames = ["Account", "GameNumber",  
                               "MoveNumber", "Move", "Time"]
             moves_writer = csv.DictWriter(moves_file, fieldnames=movefieldnames)
@@ -208,9 +208,9 @@ with open("pgn/MyGamesCosmosSolitarus.pgn") as pgn_file:
                     white_player = headers.get("White")
                     black_player = headers.get("Black")
                     result = headers.get("Result")
-                    my_elo = headers.get("WhiteElo") if white_player == "CosmosSolitarus" else headers.get("BlackElo")
-                    opp_elo = headers.get("BlackElo") if white_player == "CosmosSolitarus" else headers.get("WhiteElo")
-                    color = "white" if white_player == "CosmosSolitarus" else "black"
+                    my_elo = headers.get("WhiteElo") if white_player == "Cosmos_IV" else headers.get("BlackElo")
+                    opp_elo = headers.get("BlackElo") if white_player == "Cosmos_IV" else headers.get("WhiteElo")
+                    color = "white" if white_player == "Cosmos_IV" else "black"
                     result_text = "draw"
                     if result == "1-0" and color == "white":
                         result_text = "won"
@@ -263,7 +263,7 @@ with open("pgn/MyGamesCosmosSolitarus.pgn") as pgn_file:
 
                     # Write game details to MyGames.csv
                     games_writer.writerow({
-                        "Account": "CosmosSolitarus",
+                        "Account": "Cosmos_IV",
                         "GameNumber": game_number,
                         "Date": start_datetime.strftime("%Y-%m-%d"),
                         "StartTime": start_datetime.strftime("%H:%M:%S"),
@@ -305,7 +305,7 @@ with open("pgn/MyGamesCosmosSolitarus.pgn") as pgn_file:
                         time = times[i]
 
                         moves_writer.writerow({
-                            "Account": "CosmosSolitarus", 
+                            "Account": "Cosmos_IV", 
                             "GameNumber": game_number, 
                             "MoveNumber": move_number, 
                             "Move": move, 

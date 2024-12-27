@@ -3,8 +3,8 @@ import json
 import os
 
 # Variables to be changed
-username = "Cosmos_IV"  # Your Chess.com username
-outputFile = "pgn/MyGamesCosmos_IV.pgn"  # The output file with PGN extension
+username = "CosmosSolitarus"  # Your Chess.com username
+outputFile = "pgn/MyGamesCosmosSolitarus.pgn"  # The output file with PGN extension
 
 # Do NOT modify from here
 baseUrl = f"https://api.chess.com/pub/player/{username}/games/archives"
