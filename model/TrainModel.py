@@ -6,11 +6,14 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 import optuna
+import datetime
 
 test_split = 0.1
 n_splits = 10
 n_jobs = 8
 n_trials = 75
+
+print(f"Start time: {datetime.datetime.now()}")
 
 # Load the prepared dataset
 df = pd.read_csv("csv/MyGamesPrepared.csv")
@@ -157,3 +160,5 @@ plt.close()
 # Generate a classification report
 report = classification_report(y_test, y_pred, target_names=['Win', 'Draw', 'Loss'])
 print(report)
+
+print(f"End time: {datetime.datetime.now()}")
