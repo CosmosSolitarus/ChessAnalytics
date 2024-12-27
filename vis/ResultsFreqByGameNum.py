@@ -4,9 +4,6 @@ import matplotlib.pyplot as plt
 # Read the prepared CSV file
 df = pd.read_csv("csv/MyGamesPrepared.csv")
 
-# Set dark background style
-plt.style.use('seaborn-v0_8')
-
 def calculate_frequency(data, column):
     """Calculate percentage frequency of each game number"""
     freq = data[column].value_counts()
