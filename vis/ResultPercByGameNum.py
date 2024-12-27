@@ -1,6 +1,5 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 # Read the prepared CSV file
 df = pd.read_csv("csv/MyGamesPrepared.csv")
