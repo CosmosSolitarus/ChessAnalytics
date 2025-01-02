@@ -18,7 +18,6 @@ ax.set_facecolor('#1E1E1E')
 
 # Prepare the data
 time_data = df['TimeSinceLast'].values
-time_data = time_data[time_data > 0]  # Remove zeros and negative values
 log_time = np.log(time_data).reshape(-1, 1)
 
 # Calculate percentages for each time threshold

@@ -40,6 +40,21 @@ df['2ndLastResultIsWin'] = (df['2ndLastResult'] == 'won').astype(int)
 df['2ndLastResultIsDraw'] = (df['2ndLastResult'] == 'draw').astype(int)
 df['2ndLastResultIsLoss'] = (df['2ndLastResult'] == 'lost').astype(int)
 
+# 10. One-hot encoding for ECO values
+valid_ecos = ['A00', 'A40', 'A45', 'B10', 'B12', 'B13', 'D00', 'D02', 'D10']
+# Create ECO columns initialized to 0
+for eco in valid_ecos:
+    df[f'ECO_{eco}'] = 0
+df['ECO_Other'] = 0
+
+# Set appropriate ECO column to 1 based on the ECO value
+for idx, row in df.iterrows():
+    eco = row['ECO']
+    if eco in valid_ecos:
+        df.at[idx, f'ECO_{eco}'] = 1
+    else:
+        df.at[idx, 'ECO_Other'] = 1
+
 # Function to calculate percentages for each row
 def calculate_percentages(df, current_index):
     """
@@ -61,8 +76,8 @@ def calculate_percentages(df, current_index):
             daily_games = df.iloc[current_index - daily_window:current_index]
             daily_results = daily_games['Result'].value_counts(normalize=True)
             daily_stats['win'] = daily_results.get(0, 0) * 100
-            daily_stats['loss'] = daily_results.get(2, 0) * 100  # Note: Changed from 1 to 2 to match your mapping
-            daily_stats['draw'] = daily_results.get(1, 0) * 100  # Note: Changed from 2 to 1 to match your mapping
+            daily_stats['loss'] = daily_results.get(2, 0) * 100
+            daily_stats['draw'] = daily_results.get(1, 0) * 100
         
         # Get previous games in the week
         weekly_window = min(int(gow) - 1, current_index)
@@ -70,8 +85,8 @@ def calculate_percentages(df, current_index):
             weekly_games = df.iloc[current_index - weekly_window:current_index]
             weekly_results = weekly_games['Result'].value_counts(normalize=True)
             weekly_stats['win'] = weekly_results.get(0, 0) * 100
-            weekly_stats['loss'] = weekly_results.get(2, 0) * 100  # Note: Changed from 1 to 2
-            weekly_stats['draw'] = weekly_results.get(1, 0) * 100  # Note: Changed from 2 to 1
+            weekly_stats['loss'] = weekly_results.get(2, 0) * 100
+            weekly_stats['draw'] = weekly_results.get(1, 0) * 100
     
     return pd.Series({
         'DailyWinPerc': daily_stats['win'],
@@ -114,7 +129,9 @@ columns_to_keep = [
     'MyAvgTPM', 'OppAvgTPM',
     'TimeSinceLast',
     'DailyWinPerc', 'DailyLossPerc', 'DailyDrawPerc',
-    'WeeklyWinPerc', 'WeeklyLossPerc', 'WeeklyDrawPerc'
+    'WeeklyWinPerc', 'WeeklyLossPerc', 'WeeklyDrawPerc',
+    'ECO_A00', 'ECO_A40', 'ECO_A45', 'ECO_B10', 'ECO_B12', 'ECO_B13', 
+    'ECO_D00', 'ECO_D02', 'ECO_D10', 'ECO_Other'
 ]
 
 df = df[columns_to_keep]
