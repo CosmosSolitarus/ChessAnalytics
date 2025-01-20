@@ -1,5 +1,6 @@
 import warnings
 import datetime
+import numpy as np
 import pandas as pd
 import xgboost as xgb
 import matplotlib.pyplot as plt
@@ -19,7 +20,10 @@ print(f"Start time: {datetime.datetime.now()}")
 # Load the prepared dataset
 df = pd.read_csv("csv/MyGamesPrepared.csv")
 
-df = df[['Result', 'EloDifference', 'Color', 'ECO_A00', 'ECO_A40', 'ECO_A45', 'ECO_B10', 'ECO_B12', 'ECO_B13', 'ECO_D00', 'ECO_D02', 'ECO_D10', 'ECO_Other']]
+df = df[['Result', 'GameOfDay', 'GameOfWeek', 'TimeOfDay', 'TimeSinceLast',
+         'IsMonday', 'IsTuesday', 'IsWednesday', 'IsThursday', 'IsFriday', 'IsSaturday', 'IsSunday',
+         'DailyWinPerc', 'DailyDrawPerc', 'DailyLossPerc', 'WeeklyWinPerc', 'WeeklyDrawPerc', 'WeeklyLossPerc',
+         'Color', 'ECO_A00', 'ECO_A40', 'ECO_A45', 'ECO_B10', 'ECO_B12', 'ECO_B13', 'ECO_D00', 'ECO_D02', 'ECO_D10', 'ECO_Other']]
 
 # Maybe good: 'GameOfDay', 'GameOfWeek', 'DailyWinPerc', 'DailyDrawPerc', 'DailyLossPerc', 'WeeklyWinPerc', 'WeeklyDrawPerc', 'WeeklyLossPerc'
 
@@ -31,6 +35,8 @@ df = df[['Result', 'EloDifference', 'Color', 'ECO_A00', 'ECO_A40', 'ECO_A45', 'E
 #                    'IsMonday', 'IsTuesday', 'IsWednesday', 'IsThursday', 'IsFriday', 'IsSaturday', 'IsSunday']
 
 # df = df.drop(columns=columns_to_drop)
+
+df['TimeSinceLast'] = np.log10(df['TimeSinceLast'] + 1)
 
 # Separate features and target
 X = df.drop(columns=['Result'])
