@@ -56,10 +56,13 @@ dtrain = xgb.DMatrix(X_train, label=y_train)
 dtest = xgb.DMatrix(X_test, label=y_test)
 
 # Define class weights inversely proportional to their frequencies
+total_observations = len(y_train)
+class_counts = y_train.value_counts()
+
 class_weights = {
-    0: 100 * 2916 / 1459, # Win
-    1: 1 * 2916 / 127,    # Draw
-    2: 100 * 2916 / 1330  # Loss
+    0: 100 * total_observations / class_counts[0],  # Win
+    1: 1 * total_observations / class_counts[1],    # Draw
+    2: 100 * total_observations / class_counts[2]   # Loss
 }
 
 # Define an objective function for Optuna
