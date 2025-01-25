@@ -13,34 +13,71 @@ daily_results = filtered_data.groupby(['DayOfWeek', 'Result']).size().unstack(fi
 # Calculate percentages for each "DayOfWeek"
 daily_percentages = daily_results.div(daily_results.sum(axis=1), axis=0) * 100
 
-# Create a stacked bar chart
-plt.figure(figsize=(12, 8))
-daily_percentages.plot(kind='bar', stacked=True, color=['#137d3f', '#d62728', '#1f77b4'], ax=plt.gca())
+# Rename index to first letters of days (1-indexed)
+day_map = {1: 'M', 2: 'T', 3: 'W', 4: 'T', 5: 'F', 6: 'S', 7: 'S'}
+daily_percentages.index = [day_map[idx] for idx in daily_percentages.index]
 
-# Customize the chart
-plt.title('Win, Loss, and Draw Percentages by Day of Week (10 Minute Games)', fontsize=16, fontweight='bold')
-plt.xlabel('Day of Week', fontsize=14, fontweight='bold')
-plt.ylabel('Percentage (%)', fontsize=14, fontweight='bold')
-plt.xticks(fontsize=12, fontweight='bold', rotation=45)
-plt.yticks(fontsize=12, fontweight='bold')
+# Create figure and axis objects
+fig, ax = plt.subplots(figsize=(12, 8))
+
+# Set dark background
+fig.patch.set_facecolor('#1E1E1E')
+ax.set_facecolor('#1E1E1E')
+
+# Reorder results and rename
+daily_percentages = daily_percentages.rename(columns={
+    'draw': 'Draw', 
+    'lost': 'Loss', 
+    'won': 'Win'
+})
+
+# Create stacked bar chart
+bars = daily_percentages.plot(kind='bar', stacked=True, color=['#137d3f', '#d62728', '#1f77b4'], ax=ax)
+
+# Add data labels
+for c in bars.containers:
+    bars.bar_label(c, label_type='center', color='white', fontweight='bold', fmt='%.1f')
+
+# Customize the chart with dark theme
+ax.set_title('Win, Loss, and Draw Percentages by Day of Week (10 Minute Games)', 
+             color='white', fontsize=16, fontweight='bold', pad=20)
+ax.set_xlabel('Day of Week', color='white', fontsize=14, fontweight='bold')
+ax.set_ylabel('Percentage (%)', color='white', fontsize=14, fontweight='bold')
+
+# Style x and y axis
+ax.tick_params(axis='x', colors='white', rotation=45)
+ax.tick_params(axis='y', colors='white')
 
 # Customize legend
-plt.legend(
+handles, labels = ax.get_legend_handles_labels()
+
+legend = ax.legend(
+    reversed(handles),
+    reversed(labels),
     title='Result',
-    fontsize=14,        # Larger text
-    title_fontsize=16,  # Larger and bold title
+    title_fontsize=16,
+    fontsize=14,
     loc='center left',
     bbox_to_anchor=(1.0, 0.5),
-    frameon=False,      # Remove the box around the legend
-    prop={'weight': 'bold'}  # Make legend text bold
+    frameon=False,
+    prop={'weight': 'bold'},
+    labelcolor='white'
 )
 
+plt.setp(legend.get_title(), color='white')
+
 # Remove borders (spines)
-for spine in plt.gca().spines.values():
+for spine in ax.spines.values():
     spine.set_visible(False)
 
-# Adjust layout to add extra space on the right
-plt.tight_layout(rect=[0, 0, 0.95, 1])  # Leave extra space on the right for the legend
+# Adjust layout
+plt.tight_layout(rect=[0, 0, 0.95, 1])
 
-# Display the chart
-plt.show()
+# Save the chart with dark background
+plt.savefig('png/vis/DayOfWeek.png', 
+            dpi=300, 
+            bbox_inches='tight',
+            facecolor='#1E1E1E', 
+            edgecolor='none')
+
+plt.close()
