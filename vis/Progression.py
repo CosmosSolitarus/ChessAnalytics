@@ -59,8 +59,8 @@ def Progression():
     # Customize the chart
     ax.set_title('Elo Progression (10 Minute Games, 5/31/24 - Present)', 
                  color='white', fontsize=20, fontweight='bold', pad=20)
-    ax.set_xlabel('Game Number', color='white', fontsize=18, fontweight='bold', labelpad=20)
-    ax.set_ylabel('Elo', color='white', fontsize=18, fontweight='bold', rotation=0, labelpad=15)
+    ax.set_xlabel('Game Number', color='white', fontsize=18, fontweight='bold', labelpad=30)
+    ax.set_ylabel('Elo', color='white', fontsize=18, fontweight='bold', rotation=0, labelpad=30)
 
     # Rotate the "Elo" label sideways
     ax.yaxis.set_label_coords(-0.05, 0.5)
@@ -82,7 +82,7 @@ def Progression():
         orientation='vertical', 
         pad=0.02
     )
-    cbar.set_label('% Decrease \nfrom ATH', color='white', fontsize=18, fontweight='bold', rotation=0, labelpad=30)
+    cbar.set_label('% Decrease \nfrom Previous \nBest', color='white', fontsize=18, fontweight='bold', rotation=0, labelpad=60)
     cbar.ax.yaxis.set_tick_params(color='white', length=0, labelsize=16)
     plt.setp(plt.getp(cbar.ax.axes, 'yticklabels'), color='white')
     
