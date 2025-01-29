@@ -28,11 +28,13 @@ def Progression():
             ath = elo  # Update ATH
             colors.append('#FFD700')  # Color ATH as gold
         else:
+            dec_max = 100/7
+            
             percentage_decrease = (ath - elo) / ath * 100  # Calculate % decrease from ATH
-            percentage_decrease = min(percentage_decrease, 15)  # Cap percentage decrease at 15%
+            percentage_decrease = min(percentage_decrease, dec_max)
 
             # Normalize percentage decrease for color gradient
-            norm = mcolors.Normalize(vmin=0, vmax=15)
+            norm = mcolors.Normalize(vmin=0, vmax=dec_max)
             cmap = mcolors.LinearSegmentedColormap.from_list(
                 "ath_gradient", ['#0066FF', '#FF3333']
             )
@@ -50,15 +52,15 @@ def Progression():
         cosmos_iv_data['GameNumber'], 
         cosmos_iv_data['MyElo'], 
         c=colors, 
-        s=50,  # Size of points
+        s=50,
         edgecolor='none'
     )
 
     # Customize the chart
-    ax.set_title('Elo Progression (10 Minute Games, Post-May 31, 2024)', 
+    ax.set_title('Elo Progression (10 Minute Games, 5/31/24 - Present)', 
                  color='white', fontsize=20, fontweight='bold', pad=20)
-    ax.set_xlabel('Game Number', color='white', fontsize=18, fontweight='bold')
-    ax.set_ylabel('Elo', color='white', fontsize=18, fontweight='bold', rotation=90, labelpad=15)
+    ax.set_xlabel('Game Number', color='white', fontsize=18, fontweight='bold', labelpad=20)
+    ax.set_ylabel('Elo', color='white', fontsize=18, fontweight='bold', rotation=0, labelpad=15)
 
     # Rotate the "Elo" label sideways
     ax.yaxis.set_label_coords(-0.05, 0.5)
@@ -67,7 +69,7 @@ def Progression():
     ax.tick_params(axis='x', colors='white', length=0, labelsize=16)
     ax.tick_params(axis='y', colors='white', length=0, labelsize=16)
 
-    ax.yaxis.grid(True, linestyle='-', linewidth=0.5, color='#3A3A3A', alpha=0.5)  # Slightly lighter than #2A2A2A
+    ax.yaxis.grid(True, linestyle='-', linewidth=0.5, color='#3A3A3A', alpha=0.5)
 
     # Remove borders (spines)
     for spine in ax.spines.values():
@@ -80,20 +82,17 @@ def Progression():
         orientation='vertical', 
         pad=0.02
     )
-    cbar.set_label('% Decrease from ATH', color='white', fontsize=18, fontweight='bold', rotation=90, labelpad=15)
-    cbar.ax.yaxis.set_tick_params(color='white', labelsize=16)
+    cbar.set_label('% Decrease \nfrom ATH', color='white', fontsize=18, fontweight='bold', rotation=0, labelpad=30)
+    cbar.ax.yaxis.set_tick_params(color='white', length=0, labelsize=16)
     plt.setp(plt.getp(cbar.ax.axes, 'yticklabels'), color='white')
     
     # Show only min and max labels on color gradient
-    cbar.set_ticks([0, 15])
-    cbar.set_ticklabels(['0%', '15%'])
-    
-    # Move the colorbar label above the gradient
-    cbar.ax.yaxis.set_label_coords(1.2, 1.02)
+    cbar.set_ticks([0, dec_max])
+    cbar.set_ticklabels(['0', f'{dec_max:.1f}'])
 
     # Adjust layout and save the chart with dark background
     plt.tight_layout(rect=[0, 0, 0.95, 1])
-    plt.savefig('png/vis/Progression0.png', 
+    plt.savefig('png/vis/Progression.png', 
                 dpi=300, 
                 bbox_inches='tight', 
                 facecolor='#1E1E1E', 
