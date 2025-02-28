@@ -65,7 +65,7 @@ def create_frequency_graph(data, column, title, filename):
     plt.tight_layout()
     
     # Save the plot
-    plt.savefig(f'png/{filename}.png', dpi=300, bbox_inches='tight',
+    plt.savefig(f'png/vis/{filename}.png', dpi=300, bbox_inches='tight',
                 facecolor='#1E1E1E', edgecolor='none')
     plt.close()
 

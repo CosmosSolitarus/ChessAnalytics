@@ -1,9 +1,16 @@
+import sys
+import os
+
+# Add the project root directory to the Python path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import logging
 import time
 from get_pgn import get_pgn
 from pgn_to_csv import pgn_to_csv
 from combine_csv import combine_csv
 from feature_engineering import feature_engineering
+from vis.charts import charts
 
 def pipeline(usernames):
     """
@@ -48,12 +55,20 @@ def pipeline(usernames):
     feature_engineering()
     logging.info(f"Completed feature_engineering.py in {time.time() - feature_engineering_start_time:.2f} seconds.")
 
+    # Step 5: Run charts.py
+    logging.info("Starting charts.py.")
+    charts_start_time = time.time()
+    charts()
+    logging.info(f"Completed charts.py in {time.time() - charts_start_time:.2f} seconds.")
+
+    # Step 6: Pipeline Complete
     total_time = time.time() - start_time
     logging.info(f"Pipeline process completed in {total_time:.2f} seconds.")
 
 if __name__ == "__main__":
     # Define the list of usernames
     usernames = ["Cosmos_IV", "CosmosSolitarus"]
+    #usernames = ["Cosmos_IV"]
 
     # Run the pipeline
     pipeline(usernames)
