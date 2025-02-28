@@ -32,7 +32,7 @@ daily_percentages = daily_percentages.rename(columns={
 })
 
 # Create stacked bar chart
-bars = daily_percentages.plot(kind='bar', stacked=True, color=['#137d3f', '#d62728', '#1f77b4'], ax=ax)
+bars = daily_percentages.plot(kind='bar', stacked=True, color=['#1f77b4', '#d62728', '#137d3f'], ax=ax)
 
 # Add data labels
 for c in bars.containers:
@@ -74,7 +74,7 @@ for spine in ax.spines.values():
 plt.tight_layout(rect=[0, 0, 0.95, 1])
 
 # Save the chart with dark background
-plt.savefig('png/vis/DayOfWeek.png', 
+plt.savefig('png/vis/DailyPercentages.png', 
             dpi=300, 
             bbox_inches='tight',
             facecolor='#1E1E1E', 

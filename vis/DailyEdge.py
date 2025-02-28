@@ -69,7 +69,7 @@ ax.text(
 )
 
 # Customize the chart with dark theme
-ax.set_title('Edge (Win% - Loss%) by Day of Week (10 Minute Games)', 
+ax.set_title('Edge (Win% - Loss%) by Day of Week', 
              color='white', fontsize=16, fontweight='bold', pad=20)
 ax.set_xlabel('Day of Week', color='white', fontsize=14, fontweight='bold')
 ax.set_ylabel('Edge (%)', color='white', fontsize=14, fontweight='bold', rotation=0)
@@ -89,7 +89,7 @@ for spine in ax.spines.values():
 plt.tight_layout()
 
 # Save the chart with dark background
-plt.savefig('png/vis/DailyHourlyEdge.png', 
+plt.savefig('png/vis/DailyEdge.png', 
             dpi=300, 
             bbox_inches='tight',
             facecolor='#1E1E1E', 
