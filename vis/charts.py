@@ -1,4 +1,4 @@
-from .LineChart import all_charts
+from .Progression import all_charts
 
 def charts():
     all_charts()

@@ -151,6 +151,15 @@ def pgn_to_csv(username):
         
         return game_of_day + 1, game_of_week + 1
 
+    def isFriendlyMatch(white, black):
+        friends = ["As7rixx", "TreYerT12358", "GravityRebel", "papadabear514", "zepthro", "Flippjc", "ripjawe"]
+
+        if (white in friends or black in friends):
+            print(f"Friendly game between {white} and {black} excluded.")
+            return True
+        else:
+            return False
+
     # Open the PGN file
     with open(f"pgn/MyGames{username}.pgn") as pgn_file:
         # Prepare to write to MyGames.csv
@@ -193,7 +202,7 @@ def pgn_to_csv(username):
                         break
 
                     #if (game.headers.get("TimeControl") == "600" or game.headers.get("TimeControl") == "300"):
-                    if (game.headers.get("TimeControl") == "600"):
+                    if (game.headers.get("TimeControl") == "600" and not isFriendlyMatch(game.headers.get("White"), game.headers.get("Black"))):
                         # Extract headers
                         headers = game.headers
                         utc_date = headers.get("UTCDate")
