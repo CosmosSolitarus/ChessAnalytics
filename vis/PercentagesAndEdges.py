@@ -26,9 +26,30 @@ def create_analysis_table(csv_file='csv/MyGamesCombined.csv'):
     
     # Define reference games for each era
     # Default era - games from and after the one with Elo 803 on May 31, 2024
-    default_reference = df[
+    default_reference_start = df[
         (df['Date'] >= '2024-05-31') & 
         (df['MyElo'] == 803)
+    ].iloc[0]['GameNumber']
+    
+    # Historical era - games between Elo 803 (May 31, 2024) and Elo 1800 (August 27, 2024)
+    historical_reference_start = default_reference_start
+    historical_reference_end = df[
+        (df['Date'] >= '2024-08-27') & 
+        (df['MyElo'] == 1800)
+    ].iloc[0]['GameNumber']
+    
+    # Baseline era - games between Elo 1582 (July 1, 2024) and Elo 1800 (August 27, 2024)
+    baseline_reference_start = df[
+        (df['Date'] >= '2024-07-01') & 
+        (df['MyElo'] == 1582)
+    ].iloc[0]['GameNumber']
+    baseline_reference_end = historical_reference_end
+    
+    # Dark era - games between losing game with Elo 1792 (August 27, 2024) and Elo 1575 (November 3, 2024)
+    dark_reference_start = df[
+        (df['Date'] >= '2024-08-27') & 
+        (df['MyElo'] == 1792) & 
+        (df['Result'] == 'lost')
     ].iloc[0]['GameNumber']
     
     # Modern era - games from and after the one with Elo 1575 on Nov 3, 2024
@@ -37,6 +58,8 @@ def create_analysis_table(csv_file='csv/MyGamesCombined.csv'):
         (df['MyElo'] == 1575)
     ].iloc[0]['GameNumber']
     
+    dark_reference_end = modern_reference - 1
+    
     # Recent era - games from and after the one with Elo 1807 on Jan 24, 2025
     recent_reference = df[
         (df['Date'] >= '2025-01-24') & 
@@ -44,39 +67,45 @@ def create_analysis_table(csv_file='csv/MyGamesCombined.csv'):
     ].iloc[0]['GameNumber']
     
     # Filter data for each era
-    default_data = df[df['GameNumber'] >= default_reference]
+    default_data = df[df['GameNumber'] >= default_reference_start]
+    historical_data = df[(df['GameNumber'] >= historical_reference_start) & (df['GameNumber'] <= historical_reference_end)]
+    baseline_data = df[(df['GameNumber'] >= baseline_reference_start) & (df['GameNumber'] <= baseline_reference_end)]
+    dark_data = df[(df['GameNumber'] >= dark_reference_start) & (df['GameNumber'] <= dark_reference_end)]
     modern_data = df[df['GameNumber'] >= modern_reference]
     recent_data = df[df['GameNumber'] >= recent_reference]
     
     # Initialize results dictionary
     results = {}
     
-    # Calculate statistics for each category
-    # 1. All games
+    # Calculate statistics for each category (in the desired order)
+    # Default era
     results['All games'] = calculate_stats(default_data)
-    
-    # 2. All games as white
     results['All games as white'] = calculate_stats(default_data[default_data['Color'] == 'white'])
-    
-    # 3. All games as black
     results['All games as black'] = calculate_stats(default_data[default_data['Color'] == 'black'])
     
-    # 4. All games in the 'modern' era
+    # Historical era
+    results['All games in the historical era'] = calculate_stats(historical_data)
+    results['All games as white in the historical era'] = calculate_stats(historical_data[historical_data['Color'] == 'white'])
+    results['All games as black in the historical era'] = calculate_stats(historical_data[historical_data['Color'] == 'black'])
+    
+    # Baseline era
+    results['All games in the baseline era'] = calculate_stats(baseline_data)
+    results['All games as white in the baseline era'] = calculate_stats(baseline_data[baseline_data['Color'] == 'white'])
+    results['All games as black in the baseline era'] = calculate_stats(baseline_data[baseline_data['Color'] == 'black'])
+    
+    # Dark era
+    results['All games in the dark era'] = calculate_stats(dark_data)
+    results['All games as white in the dark era'] = calculate_stats(dark_data[dark_data['Color'] == 'white'])
+    results['All games as black in the dark era'] = calculate_stats(dark_data[dark_data['Color'] == 'black'])
+    
+    # Modern era
     results['All games in the modern era'] = calculate_stats(modern_data)
-    
-    # 5. All games as white in the 'modern' era
     results['All games as white in the modern era'] = calculate_stats(modern_data[modern_data['Color'] == 'white'])
-    
-    # 6. All games as black in the 'modern' era
     results['All games as black in the modern era'] = calculate_stats(modern_data[modern_data['Color'] == 'black'])
     
-    # 7. All games in the 'recent' era
+    # Recent era
     results['All games in the recent era'] = calculate_stats(recent_data)
-    
-    # 8. All games as white in the 'recent' era
     results['All games as white in the recent era'] = calculate_stats(recent_data[recent_data['Color'] == 'white'])
-    
-    # 9. All games as black in the 'recent' era
     results['All games as black in the recent era'] = calculate_stats(recent_data[recent_data['Color'] == 'black'])
     
     # Create a table and save as an image

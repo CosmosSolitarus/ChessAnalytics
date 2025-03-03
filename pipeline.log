@@ -326,3 +326,19 @@
 2025-03-03 14:09:54,962 - INFO - Starting charts.py.
 2025-03-03 14:09:58,740 - INFO - Completed charts.py in 3.78 seconds.
 2025-03-03 14:09:58,740 - INFO - Pipeline process completed in 45.18 seconds.
+2025-03-03 15:27:10,488 - INFO - Starting the pipeline process.
+2025-03-03 15:27:10,488 - INFO - Starting get_pgn.py for username: Cosmos_IV
+2025-03-03 15:27:21,243 - INFO - Completed get_pgn.py for username: Cosmos_IV in 10.75 seconds.
+2025-03-03 15:27:21,243 - INFO - Starting get_pgn.py for username: CosmosSolitarus
+2025-03-03 15:27:41,509 - INFO - Completed get_pgn.py for username: CosmosSolitarus in 20.27 seconds.
+2025-03-03 15:27:41,509 - INFO - Starting pgn_to_csv.py for username: Cosmos_IV
+2025-03-03 15:27:50,217 - INFO - Completed pgn_to_csv.py for username: Cosmos_IV in 8.71 seconds.
+2025-03-03 15:27:50,218 - INFO - Starting pgn_to_csv.py for username: CosmosSolitarus
+2025-03-03 15:27:57,450 - INFO - Completed pgn_to_csv.py for username: CosmosSolitarus in 7.23 seconds.
+2025-03-03 15:27:57,450 - INFO - Starting combine_csv.py with all usernames.
+2025-03-03 15:27:57,490 - INFO - Completed combine_csv.py in 0.04 seconds.
+2025-03-03 15:27:57,490 - INFO - Starting feature_engineering.py.
+2025-03-03 15:28:00,507 - INFO - Completed feature_engineering.py in 3.02 seconds.
+2025-03-03 15:28:00,507 - INFO - Starting charts.py.
+2025-03-03 15:28:04,277 - INFO - Completed charts.py in 3.77 seconds.
+2025-03-03 15:28:04,277 - INFO - Pipeline process completed in 53.79 seconds.
